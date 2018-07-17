@@ -27,6 +27,5 @@ func TestBuildTestSuite(t *testing.T) {
 	for i := 0; i < got.NumField(); i++ {
 		values[i] = got.Field(i).Interface()
 	}
-	fmt.Println(values) // UNFINISHED
-
+	fmt.Println(values)
 }
