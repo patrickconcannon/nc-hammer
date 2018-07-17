@@ -172,9 +172,9 @@ func TestAnalyseResults(t *testing.T) {
 			consoleBuffer.WriteString(host + " " + operation + " " + strconv.FormatBool(mockTs.Configs.IsReuseConnection(host)) + " " + strconv.Itoa(len(latencies)) + " " + fmt.Sprintf("%.2f", tps) + " " + fmt.Sprintf("%.2f", mean) + " " + fmt.Sprintf("%.2f", variance) + " " + fmt.Sprintf("%.2f", stddev) + " ")
 		}
 	}
-	removeWhtsp := regexp.MustCompile(`^[\s\p{Zs}]+|[\s\p{Zs}]+$`)
+	removeWhtsp := regexp.MustCompile(`^[\s\p{Zs}]+|[\s\p{Zs}]+$`) // remove whitespace outside required string
 	want := removeWhtsp.ReplaceAllString(cOut, "")
-	removeWhtsp = regexp.MustCompile(`[\s\p{Zs}]{2,}`)
+	removeWhtsp = regexp.MustCompile(`[\s\p{Zs}]{2,}`) // remove whitespace inside required string
 	want = removeWhtsp.ReplaceAllString(want, " ")
 
 	got = strings.Trim(consoleBuffer.String(), " ")
@@ -215,7 +215,7 @@ func TestAnalyseRun(t *testing.T) {
 		testArgs []string
 	}{
 		// TODO: add more use cases
-		{name: "single valid yaml file", testArgs: []string{"../results/testdata/"}},
+		{name: "single valid yaml file", testArgs: []string{"../suite/testdata/"}},
 	}
 
 	for _, tt := range tests {

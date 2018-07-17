@@ -12,8 +12,8 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// initCmd represents the init command
-var initCmd = &cobra.Command{
+// InitCmd represents the init command
+var InitCmd = &cobra.Command{
 	Use:   "init <directory>",
 	Short: "Scaffold a Test Suite and snippets directory",
 	Args: func(cmd *cobra.Command, args []string) error {
@@ -78,5 +78,5 @@ func BuildTestSuite(path string) *suite.TestSuite {
 }
 
 func init() {
-	RootCmd.AddCommand(initCmd)
+	RootCmd.AddCommand(InitCmd)
 }
