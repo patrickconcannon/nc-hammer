@@ -41,6 +41,7 @@ var InitCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		err = ioutil.WriteFile(filepath.Join(args[0], "test-suite.yml"), bytes, 0644)
 		if err != nil {
 			log.Fatal(err)
@@ -55,6 +56,7 @@ var InitCmd = &cobra.Command{
 	},
 }
 
+// BuildTestSuite Creates TestSuite scaffold files
 func BuildTestSuite(path string) *suite.TestSuite {
 	var ts suite.TestSuite
 	ts.Iterations = 5

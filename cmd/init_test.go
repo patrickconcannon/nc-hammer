@@ -1,9 +1,12 @@
 package cmd_test
 
 import (
+	"bytes"
 	"errors"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/damianoneill/nc-hammer/suite"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestBuildTestSuite(t *testing.T) { // check into test table
@@ -62,27 +66,94 @@ func TestInitCmd(t *testing.T) { // check for correct return value
 }
 
 func TestInitRun(t *testing.T) {
+	mockPath := "x"
+	yf := filepath.Join(mockPath, "/test-suite.yml")
+	sd := filepath.Join(mockPath, "/snippets")
+	xf := filepath.Join(mockPath, "/snippets/edit-config.xml")
+
 	var testInitCmd = InitCmd
 	var testCmd = &cobra.Command{}
 
-	args := []string{"test/string"}
+	args := []string{mockPath}
+	testInitCmd.Run(testCmd, args)
 
-	/*
-		If an error is return and exits with 1, there was a problem.
-		What I have to do is to test for each particular case. The
-		particular variable that will define each case will be
-	*/
+	testRun := func(t *testing.T) {
+		t.Helper()
+	}
 
-	// Run test as subprocess when environment variable is set as 1
+	t.Run("initial load file is valid", func(t *testing.T) {
+		testRun(t)
+		if _, err := os.Stat(mockPath); os.IsNotExist(err) {
+			t.Errorf("\n - File '%v' not found", mockPath)
+		}
+	})
+
+	t.Run("init files created successfully with correct permissions", func(t *testing.T) {
+		testRun(t)
+		filesToCheck := []string{mockPath, yf, sd, xf}
+
+		for _, n := range filesToCheck {
+			// check if files exist
+			if _, err := os.Stat(n); os.IsNotExist(err) {
+				t.Errorf("\n - File '%v' not found", n)
+			}
+			// check if init files have correct permissions
+			f, err := os.OpenFile(n, os.O_RDWR, 0666)
+			if err != nil {
+				if os.IsPermission(err) {
+					t.Errorf("\n - %v", err)
+				}
+			}
+			f.Close()
+		}
+	})
+
+	t.Run("YML scaffold check", func(t *testing.T) {
+		testRun(t)
+		// create mock YAML using test functions
+		mockTS := BuildTestSuite(yf)
+		mockYML, _ := yaml.Marshal(mockTS)
+
+		// read init YAML
+		initYML, _ := ioutil.ReadFile(yf)
+
+		c := bytes.Compare(mockYML, initYML)
+		if c != 0 {
+			t.Error("YML files not equal")
+		}
+	})
+
+	t.Run("XML scaffold check", func(t *testing.T) {
+		testRun(t)
+		mockXML := []byte("<interface><name>Ethernet0/0</name><mtu>1500</mtu></interface>")
+
+		// read init XML
+		initXML, _ := ioutil.ReadFile(xf)
+
+		c := bytes.Compare(mockXML, initXML)
+		if c != 0 {
+			t.Error("XML files not equal")
+		}
+	})
+	// clean up test files
+	os.RemoveAll(mockPath)
+}
+
+func TestRunSuccess(t *testing.T) {
+	var testInitCmd = InitCmd
+	var testCmd = &cobra.Command{}
+
+	mockPath := "x"
+	args := []string{mockPath}
+
 	if os.Getenv("RUN_SUBPROCESS") == "1" {
 		testInitCmd.Run(testCmd, args)
 		return
 	}
-
-	cmd := exec.Command(os.Args[0], "-test.run=TestAnalyseRun") // create new process to run test
-	cmd.Env = append(os.Environ(), "RUN_SUBPROCESS=1")          // set environmental variable
-	err := cmd.Run()                                            // run
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {     // check exit status of test subprocess
+	cmd := exec.Command(os.Args[0], "-test.run=TestInitRun") // create new process to run test
+	cmd.Env = append(os.Environ(), "RUN_SUBPROCESS=1")       // set environmental variable
+	err := cmd.Run()                                         // run
+	if e, ok := err.(*exec.ExitError); ok && !e.Success() {  // check exit status of test subprocess
 		t.Errorf("\n - Exit Status 1 returned\n - File '%v' already exists", args[0])
 	}
 }

@@ -75,7 +75,7 @@ func TestOrderAndExcludeErrValues(t *testing.T) {
 }
 
 func TestAnalyseResults(t *testing.T) {
-
+	var latencies = make(map[string]map[string][]float64)
 	var mockCmd *cobra.Command
 	var mockResults = []result.NetconfResult{ts1, ts2, ts3}
 	var mockTs = TestSuite{}
@@ -107,79 +107,86 @@ func TestAnalyseResults(t *testing.T) {
 	os.Stdout = old
 	cOut := <-out // console output
 
-	// Build log test string
+	testRun := func(t *testing.T, got, want string) {
+		t.Helper()
 
-	var logBuffer bytes.Buffer
-
-	logBuffer.WriteString("Testsuite executed at " + strings.Split(mockTs.File, string(filepath.Separator))[1] + " Suite defined the following hosts: ")
-	logBuffer.WriteString("[")
-	for _, config := range mockTs.Configs {
-		logBuffer.WriteString(config.Hostname + " ")
+		assert.Equal(t, got, want)
 	}
-	logBuffer.WriteString("] ")
 
-	latencies := make(map[string]map[string][]float64)
-	errCount := OrderAndExcludeErrValues(mockResults, latencies)
+	t.Run("Log check", func(t *testing.T) {
 
-	var when float64
-	for _, result := range mockResults {
-		if result.When > when {
-			when = result.When
+		var logBuffer bytes.Buffer
+
+		logBuffer.WriteString("Testsuite executed at " + strings.Split(mockTs.File, string(filepath.Separator))[1] + " Suite defined the following hosts: ")
+		logBuffer.WriteString("[")
+		for _, config := range mockTs.Configs {
+			logBuffer.WriteString(config.Hostname + " ")
 		}
-	}
-	executionTime := time.Duration(when) * time.Millisecond
+		logBuffer.WriteString("] ")
 
-	logBuffer.WriteString(strconv.Itoa(mockTs.Clients) + " client(s) started, " + strconv.Itoa(mockTs.Iterations) + " iterations per client, " + strconv.Itoa(mockTs.Rampup) + " seconds wait between starting each client ")
-	logBuffer.WriteString(" Total execution time: " + executionTime.String() + ", Suite execution contained " + strconv.Itoa(errCount) + " errors")
+		errCount := OrderAndExcludeErrValues(mockResults, latencies)
 
-	// Format logString
-
-	re := regexp.MustCompile(`\r?\n`)
-	got := strings.Trim(re.ReplaceAllString(lOut.String(), " "), " ")
-
-	assert.Equal(t, got, logBuffer.String()) // test
-
-	// TODO: Add test cases to capture op and hostname test cases --
-	op := ""
-	hostname := ""
-
-	// sort latencies Map by key
-	var keys []string
-	for k := range latencies {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	consoleBuffer := new(bytes.Buffer)
-	consoleBuffer.WriteString("HOST OPERATION REUSE CONNECTION REQUESTS TPS MEAN VARIANCE STD DEVIATION ")
-	for _, k := range keys {
-		host := k
-		operations := latencies[k]
-		// Build console test string
-
-		//	for host, operations := range latencies {
-		for operation, latencies := range operations {
-			if op != "" && op != operation {
-				continue
+		var when float64
+		for _, result := range mockResults {
+			if result.When > when {
+				when = result.When
 			}
-			if hostname != "" && hostname != host {
-				continue
-			}
-			mean := stat.Mean(latencies, nil)
-			tps := 1000 / mean
-			variance := stat.Variance(latencies, nil)
-			stddev := math.Sqrt(variance)
-			consoleBuffer.WriteString(host + " " + operation + " " + strconv.FormatBool(mockTs.Configs.IsReuseConnection(host)) + " " + strconv.Itoa(len(latencies)) + " " + fmt.Sprintf("%.2f", tps) + " " + fmt.Sprintf("%.2f", mean) + " " + fmt.Sprintf("%.2f", variance) + " " + fmt.Sprintf("%.2f", stddev) + " ")
 		}
-	}
+		executionTime := time.Duration(when) * time.Millisecond
 
-	removeWhtsp := regexp.MustCompile(`^[\s\p{Zs}]+|[\s\p{Zs}]+$`) // remove whitespace outside required string
-	want := removeWhtsp.ReplaceAllString(cOut, "")
-	removeWhtsp = regexp.MustCompile(`[\s\p{Zs}]{2,}`) // remove whitespace inside required string
-	want = removeWhtsp.ReplaceAllString(want, " ")
+		logBuffer.WriteString(strconv.Itoa(mockTs.Clients) + " client(s) started, " + strconv.Itoa(mockTs.Iterations) + " iterations per client, " + strconv.Itoa(mockTs.Rampup) + " seconds wait between starting each client ")
+		logBuffer.WriteString(" Total execution time: " + executionTime.String() + ", Suite execution contained " + strconv.Itoa(errCount) + " errors")
 
-	got = strings.Trim(consoleBuffer.String(), " ")
-	assert.Equal(t, want, got) //test
+		// Format logString
+
+		re := regexp.MustCompile(`\r?\n`)
+		got := strings.Trim(re.ReplaceAllString(lOut.String(), " "), " ")
+
+		testRun(t, got, logBuffer.String())
+	})
+
+	t.Run("Console check", func(t *testing.T) {
+		// TODO: Add test cases to capture op and hostname test cases --
+		op := ""
+		hostname := ""
+
+		// sort latencies Map by key
+		var keys []string
+		for k := range latencies {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		consoleBuffer := new(bytes.Buffer)
+		consoleBuffer.WriteString("HOST OPERATION REUSE CONNECTION REQUESTS TPS MEAN VARIANCE STD DEVIATION ")
+		for _, k := range keys {
+			host := k
+			operations := latencies[k]
+			//	for host, operations := range latencies {
+			for operation, latencies := range operations {
+				if op != "" && op != operation {
+					continue
+				}
+				if hostname != "" && hostname != host {
+					continue
+				}
+				mean := stat.Mean(latencies, nil)
+				tps := 1000 / mean
+				variance := stat.Variance(latencies, nil)
+				stddev := math.Sqrt(variance)
+				consoleBuffer.WriteString(host + " " + operation + " " + strconv.FormatBool(mockTs.Configs.IsReuseConnection(host)) + " " + strconv.Itoa(len(latencies)) + " " + fmt.Sprintf("%.2f", tps) + " " + fmt.Sprintf("%.2f", mean) + " " + fmt.Sprintf("%.2f", variance) + " " + fmt.Sprintf("%.2f", stddev) + " ")
+			}
+		}
+		// remove formating from test table
+		removeWhtsp := regexp.MustCompile(`^[\s\p{Zs}]+|[\s\p{Zs}]+$`) // remove whitespace outside required string
+		want := removeWhtsp.ReplaceAllString(cOut, "")
+		removeWhtsp = regexp.MustCompile(`[\s\p{Zs}]{2,}`) // remove whitespace inside required string
+		want = removeWhtsp.ReplaceAllString(want, " ")
+
+		got := strings.Trim(consoleBuffer.String(), " ")
+
+		testRun(t, got, want)
+	})
 }
 
 func TestAnalyseArgs(t *testing.T) {
@@ -216,7 +223,7 @@ func TestAnalyseRun(t *testing.T) {
 		testArgs []string
 	}{
 		// TODO: add more use cases
-		{name: "single valid yaml file", testArgs: []string{"../suite/tstdata/"}},
+		{name: "single valid yaml file", testArgs: []string{"../suite/testdata/"}},
 	}
 
 	for _, tt := range tests {
