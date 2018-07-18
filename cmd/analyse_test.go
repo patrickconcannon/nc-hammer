@@ -172,6 +172,7 @@ func TestAnalyseResults(t *testing.T) {
 			consoleBuffer.WriteString(host + " " + operation + " " + strconv.FormatBool(mockTs.Configs.IsReuseConnection(host)) + " " + strconv.Itoa(len(latencies)) + " " + fmt.Sprintf("%.2f", tps) + " " + fmt.Sprintf("%.2f", mean) + " " + fmt.Sprintf("%.2f", variance) + " " + fmt.Sprintf("%.2f", stddev) + " ")
 		}
 	}
+
 	removeWhtsp := regexp.MustCompile(`^[\s\p{Zs}]+|[\s\p{Zs}]+$`) // remove whitespace outside required string
 	want := removeWhtsp.ReplaceAllString(cOut, "")
 	removeWhtsp = regexp.MustCompile(`[\s\p{Zs}]{2,}`) // remove whitespace inside required string
@@ -215,21 +216,22 @@ func TestAnalyseRun(t *testing.T) {
 		testArgs []string
 	}{
 		// TODO: add more use cases
-		{name: "single valid yaml file", testArgs: []string{"../suite/testdata/"}},
+		{name: "single valid yaml file", testArgs: []string{"../suite/tstdata/"}},
 	}
 
 	for _, tt := range tests {
 
+		// Run test as subprocess when environment variable is set as 1
 		if os.Getenv("RUN_SUBPROCESS") == "1" {
 			AnalyseCmd.Run(tt.testCmd, tt.testArgs)
 			return
 		}
-		cmd := exec.Command(os.Args[0], "-test.run=TestAnalyseRun")
-		cmd.Env = append(os.Environ(), "RUN_SUBPROCESS=1")
-		err := cmd.Run()
-		if e, ok := err.(*exec.ExitError); ok && !e.Success() {
+
+		cmd := exec.Command(os.Args[0], "-test.run=TestAnalyseRun") // create new process to run test
+		cmd.Env = append(os.Environ(), "RUN_SUBPROCESS=1")          // set environmental variable
+		err := cmd.Run()                                            // run
+		if e, ok := err.(*exec.ExitError); ok && !e.Success() {     // check exit status of test subprocess
 			t.Fatalf("Program failed to load file -- os.Exit(1)")
 		}
-		return
 	}
 }
