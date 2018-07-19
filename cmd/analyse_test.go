@@ -147,6 +147,13 @@ func TestAnalyseResults(t *testing.T) {
 
 	t.Run("Console check", func(t *testing.T) {
 		// TODO: Add test cases to capture op and hostname test cases --
+		/*
+			mockCmd.SetArgs([]string{ // sets flags
+				"test",
+				//fmt.Sprintf("--some-string=%s", value),
+				//fmt.Sprintf("--some-integer=%d", integer),
+			})
+		*/
 		op := ""
 		hostname := ""
 

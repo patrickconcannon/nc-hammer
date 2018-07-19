@@ -117,7 +117,7 @@ func TestInitRun(t *testing.T) {
 		// read init YAML
 		initYML, _ := ioutil.ReadFile(yf)
 
-		c := bytes.Compare(mockYML, initYML)
+		c := bytes.Compare(mockYML, initYML) // what about just using assertEqual ?! -- also can use asssert dirExist
 		if c != 0 {
 			t.Error("YML files not equal")
 		}
@@ -130,7 +130,7 @@ func TestInitRun(t *testing.T) {
 		// read init XML
 		initXML, _ := ioutil.ReadFile(xf)
 
-		c := bytes.Compare(mockXML, initXML)
+		c := bytes.Compare(mockXML, initXML) // what about just using assertEqual ?!
 		if c != 0 {
 			t.Error("XML files not equal")
 		}
