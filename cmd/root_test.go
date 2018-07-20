@@ -13,7 +13,7 @@ func Test_RootExecuteFail(t *testing.T) {
 
 	// set dud flag for root command to test failing-cause within root.Execute()
 	mockRootCmd.SetArgs([]string{
-		"_null value_",
+		"_failing value_",
 	})
 
 	if os.Getenv("RUN_SUBPROCESS") == "1" {

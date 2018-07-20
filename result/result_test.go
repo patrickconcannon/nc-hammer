@@ -1,0 +1,67 @@
+package result_test
+
+import (
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
+
+	"github.com/damianoneill/nc-hammer/result"
+	"github.com/gocarina/gocsv"
+	"github.com/stretchr/testify/assert"
+
+	//. "github.com/damianoneill/nc-hammer/result"
+	"github.com/damianoneill/nc-hammer/suite"
+)
+
+func TestHandleResults(t *testing.T) {
+
+	var mock_NetConfResults = []result.NetconfResult{
+		result.NetconfResult{Client: 5, SessionID: 2318, Hostname: "172.26.138.91", Operation: "edit-config", When: 55282, Err: "", Latency: 288},
+		result.NetconfResult{Client: 6, SessionID: 859, Hostname: "172.26.138.92", Operation: "get-config", When: 55943, Err: "", Latency: 176},
+		result.NetconfResult{Client: 4, SessionID: 601, Hostname: "172.26.138.93", Operation: "get", When: 9840, Err: "", Latency: 3320},
+		result.NetconfResult{Client: 4, SessionID: 2322, Hostname: "172.26.138.91", Operation: "get", When: 56967, Err: "", Latency: 420},
+		result.NetconfResult{Client: 4, SessionID: 860, Hostname: "172.26.138.92", Operation: "kill-session", When: 0, Err: "kill-session is not a supported operation", Latency: 0},
+	}
+
+	var mockTS = &suite.TestSuite{}
+	var mockRC = make(chan result.NetconfResult)
+	var mockHRF = make(chan bool)
+
+	go result.HandleResults(mockRC, mockHRF, mockTS)
+
+	// run the mock process to simulate result.HandleResults()
+
+	foundResults := []result.NetconfResult{}
+	for _, r := range mock_NetConfResults {
+		mockRC <- r
+		foundResults = append(foundResults, r)
+	}
+	close(mockRC)
+
+	<-mockHRF // Finish
+
+	// checks if HandleResults is writing to channels correctly
+	if !reflect.DeepEqual(foundResults, mock_NetConfResults) {
+		t.Errorf("got %v want %v", foundResults, mock_NetConfResults)
+	}
+
+}
+
+func TestUnarchiveResults(t *testing.T) {
+
+	mockResultPath := "../suite/testdata/"
+
+	var mockNCR = []result.NetconfResult{}
+	var mockTS, mockErr = suite.NewTestSuite(filepath.Join(mockResultPath, "test-suite.yml"))
+
+	results, _ := os.OpenFile(filepath.Join(mockResultPath, "results.csv"), os.O_RDWR|os.O_CREATE, os.ModePerm)
+	gocsv.UnmarshalFile(results, &mockNCR)
+
+	nr, ts, e := result.UnarchiveResults(mockResultPath)
+
+	assert.Equal(t, mockNCR, nr)
+	assert.Equal(t, mockTS, ts)
+	assert.Equal(t, mockErr, e)
+
+}
