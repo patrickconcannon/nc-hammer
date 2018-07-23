@@ -20,7 +20,7 @@ func Test_RootExecuteFail(t *testing.T) {
 		cmd.Execute("")
 		return
 	}
-	// run function under test in parallel command to check Exit code it returns
+	// run function under test in parallel command process to check Exit code it returns
 	cmd := exec.Command(os.Args[0], "-test.run=Test_RootExecute")
 	cmd.Env = append(os.Environ(), "RUN_SUBPROCESS=1")
 	err := cmd.Run()

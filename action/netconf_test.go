@@ -1,6 +1,8 @@
 package action_test
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestExecuteNetconf(t *testing.T) {
 

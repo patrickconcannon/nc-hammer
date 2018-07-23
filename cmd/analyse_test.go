@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -146,7 +145,7 @@ func TestAnalyseResults(t *testing.T) {
 	})
 
 	t.Run("Console check", func(t *testing.T) {
-		// TODO: Add test cases to capture op and hostname test cases --
+		// TODO: Add test cases to capture op and hostname test cases
 		/*
 			mockCmd.SetArgs([]string{ // sets flags
 				"test",
@@ -157,12 +156,7 @@ func TestAnalyseResults(t *testing.T) {
 		op := ""
 		hostname := ""
 
-		// sort latencies Map by key
-		var keys []string
-		for k := range latencies {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
+		keys := SortLatencies(latencies)
 
 		consoleBuffer := new(bytes.Buffer)
 		consoleBuffer.WriteString("HOST OPERATION REUSE CONNECTION REQUESTS TPS MEAN VARIANCE STD DEVIATION ")

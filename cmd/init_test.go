@@ -17,7 +17,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func TestBuildTestSuite(t *testing.T) { // check into test table
+func TestBuildTestSuite(t *testing.T) {
 
 	mockPath := ""
 	got := BuildTestSuite(mockPath)
@@ -36,7 +36,7 @@ func TestBuildTestSuite(t *testing.T) { // check into test table
 	if got.Rampup != 0 {
 		t.Errorf("Rampup: got %v, want %v", got.Rampup, 0)
 	}
-	if reflect.ValueOf(got.Configs).Type() != reflect.TypeOf(want.Configs) { // should I look at the values contained within here?
+	if reflect.ValueOf(got.Configs).Type() != reflect.TypeOf(want.Configs) {
 		t.Error("Testsuite.Configs is not of type Configs")
 	}
 	if reflect.ValueOf(got.Blocks).Type() != reflect.TypeOf(want.Blocks) {
@@ -55,21 +55,21 @@ func TestInitCmd(t *testing.T) { // check for correct return value
 	}
 
 	t.Run("args != 1", func(t *testing.T) {
-		var a = []string{"a", "b"}
+		var a = []string{"x", "y"}
 		testFunc(t, a, errors.New("init command requires a directory as an argument"))
 	})
 
 	t.Run("args == 1", func(t *testing.T) {
-		var a = []string{"a"}
+		var a = []string{"x"}
 		testFunc(t, a, nil)
 	})
 }
 
 func TestInitRun(t *testing.T) {
 	mockPath := "x"
-	yf := filepath.Join(mockPath, "/test-suite.yml")
-	sd := filepath.Join(mockPath, "/snippets")
-	xf := filepath.Join(mockPath, "/snippets/edit-config.xml")
+	YMLpath := filepath.Join(mockPath, "/test-suite.yml")
+	snippetsPath := filepath.Join(mockPath, "/snippets")
+	XMLpath := filepath.Join(mockPath, "/snippets/edit-config.xml")
 
 	var testInitCmd = InitCmd
 	var testCmd = &cobra.Command{}
@@ -90,7 +90,7 @@ func TestInitRun(t *testing.T) {
 
 	t.Run("init files created successfully with correct permissions", func(t *testing.T) {
 		testRun(t)
-		filesToCheck := []string{mockPath, yf, sd, xf}
+		filesToCheck := []string{mockPath, YMLpath, snippetsPath, XMLpath}
 
 		for _, n := range filesToCheck {
 			// check if files exist
@@ -111,13 +111,13 @@ func TestInitRun(t *testing.T) {
 	t.Run("YML scaffold check", func(t *testing.T) {
 		testRun(t)
 		// create mock YAML using test functions
-		mockTS := BuildTestSuite(yf)
+		mockTS := BuildTestSuite(YMLpath)
 		mockYML, _ := yaml.Marshal(mockTS)
 
 		// read init YAML
-		initYML, _ := ioutil.ReadFile(yf)
+		initYML, _ := ioutil.ReadFile(YMLpath)
 
-		c := bytes.Compare(mockYML, initYML) // what about just using assertEqual ?! -- also can use asssert dirExist
+		c := bytes.Compare(mockYML, initYML) // change for assert.Equal or dirExist
 		if c != 0 {
 			t.Error("YML files not equal")
 		}
@@ -128,9 +128,9 @@ func TestInitRun(t *testing.T) {
 		mockXML := []byte("<interface><name>Ethernet0/0</name><mtu>1500</mtu></interface>")
 
 		// read init XML
-		initXML, _ := ioutil.ReadFile(xf)
+		initXML, _ := ioutil.ReadFile(XMLpath)
 
-		c := bytes.Compare(mockXML, initXML) // what about just using assertEqual ?!
+		c := bytes.Compare(mockXML, initXML) // change for assert.Equal
 		if c != 0 {
 			t.Error("XML files not equal")
 		}

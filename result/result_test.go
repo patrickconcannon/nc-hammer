@@ -24,24 +24,24 @@ func TestHandleResults(t *testing.T) {
 		result.NetconfResult{Client: 4, SessionID: 860, Hostname: "172.26.138.92", Operation: "kill-session", When: 0, Err: "kill-session is not a supported operation", Latency: 0},
 	}
 
-	var mockTS = &suite.TestSuite{}
-	var mockRC = make(chan result.NetconfResult)
-	var mockHRF = make(chan bool)
+	var mockTestsuite = &suite.TestSuite{}
+	var mockResultChan = make(chan result.NetconfResult)
+	var mockResultsHandler = make(chan bool)
 
-	go result.HandleResults(mockRC, mockHRF, mockTS)
+	go result.HandleResults(mockResultChan, mockResultsHandler, mockTestsuite)
 
 	// run the mock process to simulate result.HandleResults()
 
 	foundResults := []result.NetconfResult{}
 	for _, r := range mock_NetConfResults {
-		mockRC <- r
+		mockResultChan <- r
 		foundResults = append(foundResults, r)
 	}
-	close(mockRC)
+	close(mockResultChan)
 
-	<-mockHRF // Finish
+	<-mockResultsHandler // Finish
 
-	// checks if HandleResults is writing to channels correctly
+	// checks if HandleResults has writen to channel correctly
 	if !reflect.DeepEqual(foundResults, mock_NetConfResults) {
 		t.Errorf("got %v want %v", foundResults, mock_NetConfResults)
 	}
@@ -53,7 +53,7 @@ func TestUnarchiveResults(t *testing.T) {
 	mockResultPath := "../suite/testdata/"
 
 	var mockNCR = []result.NetconfResult{}
-	var mockTS, mockErr = suite.NewTestSuite(filepath.Join(mockResultPath, "test-suite.yml"))
+	var mockTestsuite, mockErr = suite.NewTestSuite(filepath.Join(mockResultPath, "test-suite.yml"))
 
 	results, _ := os.OpenFile(filepath.Join(mockResultPath, "results.csv"), os.O_RDWR|os.O_CREATE, os.ModePerm)
 	gocsv.UnmarshalFile(results, &mockNCR)
@@ -61,7 +61,7 @@ func TestUnarchiveResults(t *testing.T) {
 	nr, ts, e := result.UnarchiveResults(mockResultPath)
 
 	assert.Equal(t, mockNCR, nr)
-	assert.Equal(t, mockTS, ts)
+	assert.Equal(t, mockTestsuite, ts)
 	assert.Equal(t, mockErr, e)
 
 }

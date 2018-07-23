@@ -74,12 +74,7 @@ func AnalyseResults(cmd *cobra.Command, ts *suite.TestSuite, results []result.Ne
 	//	hostname, _ := cmd.Flags().GetString("hostname")
 	hostname := ""
 
-	// sort latencies Map by key
-	var keys []string
-	for k := range latencies {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+	keys := SortLatencies(latencies) // returns sorted key index to latencies
 
 	data := [][]string{}
 	for _, k := range keys {
@@ -149,4 +144,15 @@ func init() {
 	RootCmd.AddCommand(AnalyseCmd)
 	AnalyseCmd.Flags().StringP("operation", "o", "", "filter based on operation type; get, get-config or edit-config")
 	AnalyseCmd.Flags().StringP("hostname", "", "", "filter based on host name or ip")
+}
+
+// SortLatencies Sorts keys of latencies Map to allow for ordered iteration of map
+func SortLatencies(latencies map[string]map[string][]float64) []string {
+	var keys []string
+	for k := range latencies {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	return keys
 }
