@@ -36,7 +36,7 @@ func ExecuteNetconf(tsStart time.Time, cID int, action suite.Action, config *sui
 	result.Hostname = action.Netconf.Hostname
 	result.Operation = action.Netconf.Operation
 
-	session, err := GetSession(cID, config.Hostname+":"+strconv.Itoa(config.Port), config.Username, config.Password, config.Reuseconnection)
+	session, err := getSession(cID, config.Hostname+":"+strconv.Itoa(config.Port), config.Username, config.Password, config.Reuseconnection)
 	if err != nil {
 		fmt.Printf("E")
 		result.Err = err.Error()
@@ -101,8 +101,11 @@ func ExecuteNetconf(tsStart time.Time, cID int, action suite.Action, config *sui
 	resultChannel <- result
 }
 
-// GetSession returns a NETCONF Session, either a new one or a pre existing one if resuseConnection is valid for client/host
-func GetSession(client int, hostname string, username string, password string, reuseConnection bool) (*netconf.Session, error) {
+
+
+// getSession returns a NETCONF Session, either a new one or a pre existing one if resuseConnection is valid for client/host
+func getSession(client int, hostname, username, password string, reuseConnection bool) (*netconf.Session, error) {
+
 	// check if hostname should reuse connection
 	if reuseConnection {
 		// get Session from Map if present
@@ -120,8 +123,10 @@ func GetSession(client int, hostname string, username string, password string, r
 	return CreateNewSession(hostname, username, password)
 }
 
-// CreateNewSession Creates a SSH session
-func CreateNewSession(hostname string, username string, password string) (*netconf.Session, error) {
+
+
+func createNewSession(hostname, username, password string) (*netconf.Session, error) {
+
 	sshConfig := &ssh.ClientConfig{
 		User:            username,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
