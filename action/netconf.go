@@ -101,7 +101,6 @@ func ExecuteNetconf(tsStart time.Time, cID int, action suite.Action, config *sui
 
 // getSession returns a NETCONF Session, either a new one or a pre existing one if resuseConnection is valid for client/host
 func getSession(client int, hostname, username, password string, reuseConnection bool) (*netconf.Session, error) {
-
 	// check if hostname should reuse connection
 	if reuseConnection {
 		// get Session from Map if present
@@ -120,7 +119,6 @@ func getSession(client int, hostname, username, password string, reuseConnection
 }
 
 func createNewSession(hostname, username, password string) (*netconf.Session, error) {
-
 	sshConfig := &ssh.ClientConfig{
 		User:            username,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
