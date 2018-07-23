@@ -101,8 +101,11 @@ func ExecuteNetconf(tsStart time.Time, cID int, action suite.Action, config *sui
 	resultChannel <- result
 }
 
+
+
 // getSession returns a NETCONF Session, either a new one or a pre existing one if resuseConnection is valid for client/host
 func getSession(client int, hostname, username, password string, reuseConnection bool) (*netconf.Session, error) {
+
 	// check if hostname should reuse connection
 	if reuseConnection {
 		// get Session from Map if present
@@ -111,16 +114,19 @@ func getSession(client int, hostname, username, password string, reuseConnection
 			return session, nil
 		}
 		// not present in map, therefore first time its called, create a new session and store in map
-		session, err := createNewSession(hostname, username, password)
+		session, err := CreateNewSession(hostname, username, password)
 		if err == nil {
 			gSessions[strconv.Itoa(client)+hostname] = session
 		}
 		return session, nil
 	}
-	return createNewSession(hostname, username, password)
+	return CreateNewSession(hostname, username, password)
 }
 
+
+
 func createNewSession(hostname, username, password string) (*netconf.Session, error) {
+
 	sshConfig := &ssh.ClientConfig{
 		User:            username,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
