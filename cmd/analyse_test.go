@@ -81,9 +81,9 @@ func TestAnalyseResults(t *testing.T) {
 	mockTs.File = "testdata/emptytestsuite.yml"
 
 	// Capture StdErr
-	var lOut = new(bytes.Buffer)
+	var logOut = new(bytes.Buffer)
 	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime)) // remove timestamps
-	log.SetOutput(lOut)                                  // log output
+	log.SetOutput(logOut)                                // log output
 
 	// Capture StdOut
 	old := os.Stdout
@@ -104,7 +104,7 @@ func TestAnalyseResults(t *testing.T) {
 
 	w.Close()
 	os.Stdout = old
-	cOut := <-out // console output
+	consoleOut := <-out // console output
 
 	testRun := func(t *testing.T, got, want string) {
 		t.Helper()
@@ -139,7 +139,7 @@ func TestAnalyseResults(t *testing.T) {
 		// Format logString
 
 		re := regexp.MustCompile(`\r?\n`)
-		got := strings.Trim(re.ReplaceAllString(lOut.String(), " "), " ")
+		got := strings.Trim(re.ReplaceAllString(logOut.String(), " "), " ")
 
 		testRun(t, got, logBuffer.String())
 	})
@@ -148,11 +148,16 @@ func TestAnalyseResults(t *testing.T) {
 		// TODO: Add test cases to capture op and hostname test cases
 		/*
 			mockCmd.SetArgs([]string{ // sets flags
-				"test",
-				//fmt.Sprintf("--some-string=%s", value),
-				//fmt.Sprintf("--some-integer=%d", integer),
+				"",
+				"",
 			})
+
+			//nolint
+			op, _ := mockCmd.Flags().GetString("operation")
+			//nolint
+			hostname, _ := mockCmd.Flags().GetString("hostname")
 		*/
+
 		op := ""
 		hostname := ""
 
@@ -180,7 +185,7 @@ func TestAnalyseResults(t *testing.T) {
 		}
 		// remove formating from test table
 		removeWhtsp := regexp.MustCompile(`^[\s\p{Zs}]+|[\s\p{Zs}]+$`) // remove whitespace outside required string
-		want := removeWhtsp.ReplaceAllString(cOut, "")
+		want := removeWhtsp.ReplaceAllString(consoleOut, "")
 		removeWhtsp = regexp.MustCompile(`[\s\p{Zs}]{2,}`) // remove whitespace inside required string
 		want = removeWhtsp.ReplaceAllString(want, " ")
 

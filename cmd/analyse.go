@@ -68,10 +68,10 @@ func AnalyseResults(cmd *cobra.Command, ts *suite.TestSuite, results []result.Ne
 	log.Println("")
 
 	//nolint
-	//	op, _ := cmd.Flags().GetString("operation")
-	op := ""
+	//op, _ := cmd.Flags().GetString("operation")
 	//nolint
-	//	hostname, _ := cmd.Flags().GetString("hostname")
+	//hostname, _ := cmd.Flags().GetString("hostname")
+	op := ""
 	hostname := ""
 
 	keys := SortLatencies(latencies) // returns sorted key index to latencies
