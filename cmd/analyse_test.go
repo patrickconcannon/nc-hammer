@@ -215,18 +215,17 @@ func TestAnalyseRun(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		testCmd  *cobra.Command
+		mockCmd  *cobra.Command
 		testArgs []string
 	}{
 		// TODO: add more use cases
-		{name: "single valid yaml file", testArgs: []string{"suite/testdata/results_test/2018-07-18-19-56-01/"}},
+		{name: "single valid yaml file", mockCmd: &cobra.Command{}, testArgs: []string{"../suite/testdata"}},
 	}
 
 	for _, tt := range tests {
-
 		// Run test as subprocess when environment variable is set as 1
 		if os.Getenv("RUN_SUBPROCESS") == "1" {
-			AnalyseCmd.Run(tt.testCmd, tt.testArgs)
+			AnalyseCmd.Run(tt.mockCmd, tt.testArgs)
 			return
 		}
 
