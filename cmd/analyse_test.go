@@ -219,7 +219,7 @@ func TestAnalyseRun(t *testing.T) {
 		testArgs []string
 	}{
 		// TODO: add more use cases
-		{name: "single valid yaml file", testArgs: []string{"../suite/testdata/"}},
+		{name: "single valid yaml file", testArgs: []string{"suite/testdata/results_test/2018-07-18-19-56-01/"}},
 	}
 
 	for _, tt := range tests {

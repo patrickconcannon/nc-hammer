@@ -99,7 +99,6 @@ func AnalyseResults(cmd *cobra.Command, ts *suite.TestSuite, results []result.Ne
 
 // OrderAndExcludeErrValues Orders the results and removes errors from output. Returns number of errors found.
 func OrderAndExcludeErrValues(results []result.NetconfResult, latencies map[string]map[string][]float64) int {
-
 	var errCount int
 	for idx := range results {
 		if latencies[results[idx].Hostname] == nil {

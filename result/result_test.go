@@ -26,20 +26,18 @@ func TestHandleResults(t *testing.T) {
 	var mockResultChan = make(chan result.NetconfResult)
 	var mockResultsHandler = make(chan bool)
 
-	go result.HandleResults(mockResultChan, mockResultsHandler, mockTestsuite)
+	go result.HandleResults(mockResultChan, mockResultsHandler, mockTestsuite) // run channels
 
-	// run the mock process to simulate result.HandleResults()
-
+	// feed mock data into result.HandleResults() via mockResultChan channel
 	foundResults := []result.NetconfResult{}
 	for _, r := range mock_NetConfResults {
 		mockResultChan <- r
 		foundResults = append(foundResults, r)
 	}
 	close(mockResultChan)
-
 	<-mockResultsHandler // Finish
 
-	// checks if HandleResults has writen to channel correctly
+	// test to see if HandleResults() has recorded Results correctly
 	if !reflect.DeepEqual(foundResults, mock_NetConfResults) {
 		t.Errorf("got %v want %v", foundResults, mock_NetConfResults)
 	}
