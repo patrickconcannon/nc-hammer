@@ -27,11 +27,11 @@ import (
 
 // Test variables used to populate []result.NetconfResult used throughout
 var (
-	ts1 = result.NetconfResult{Client: 5, SessionID: 2318, Hostname: "172.26.138.91", Operation: "edit-config", When: 55282, Err: "", Latency: 288}
-	ts2 = result.NetconfResult{Client: 6, SessionID: 859, Hostname: "172.26.138.92", Operation: "get-config", When: 55943, Err: "", Latency: 176}
-	ts3 = result.NetconfResult{Client: 4, SessionID: 601, Hostname: "172.26.138.93", Operation: "get", When: 9840, Err: "", Latency: 3320}
-	ts4 = result.NetconfResult{Client: 4, SessionID: 2322, Hostname: "172.26.138.91", Operation: "get", When: 56967, Err: "", Latency: 420}
-	ts5 = result.NetconfResult{Client: 4, SessionID: 860, Hostname: "172.26.138.92", Operation: "kill-session", When: 0, Err: "kill-session is not a supported operation", Latency: 0}
+	ts1 = result.NetconfResult{Client: 5, SessionID: 2318, Hostname: "10.0.0.1", Operation: "edit-config", When: 55282, Err: "", Latency: 288}
+	ts2 = result.NetconfResult{Client: 6, SessionID: 859, Hostname: "10.0.0.2", Operation: "get-config", When: 55943, Err: "", Latency: 176}
+	ts3 = result.NetconfResult{Client: 4, SessionID: 601, Hostname: "10.0.0.3", Operation: "get", When: 9840, Err: "", Latency: 3320}
+	ts4 = result.NetconfResult{Client: 4, SessionID: 2322, Hostname: "10.0.0.1", Operation: "get", When: 56967, Err: "", Latency: 420}
+	ts5 = result.NetconfResult{Client: 4, SessionID: 860, Hostname: "10.0.0.2", Operation: "kill-session", When: 0, Err: "kill-session is not a supported operation", Latency: 0}
 )
 
 func TestSortResults(t *testing.T) {
@@ -75,7 +75,7 @@ func TestOrderAndExcludeErrValues(t *testing.T) {
 
 func TestAnalyseResults(t *testing.T) {
 	var latencies = make(map[string]map[string][]float64)
-	var mockCmd *cobra.Command
+	var mockCmd *cobra.Command = &cobra.Command{}
 	var mockResults = []result.NetconfResult{ts1, ts2, ts3}
 	var mockTs = TestSuite{}
 	mockTs.File = "testdata/emptytestsuite.yml"
@@ -145,21 +145,11 @@ func TestAnalyseResults(t *testing.T) {
 	})
 
 	t.Run("Console check", func(t *testing.T) {
-		// TODO: Add test cases to capture op and hostname test cases
-		/*
-			mockCmd.SetArgs([]string{ // sets flags
-				"",
-				"",
-			})
 
-			//nolint
-			op, _ := mockCmd.Flags().GetString("operation")
-			//nolint
-			hostname, _ := mockCmd.Flags().GetString("hostname")
-		*/
-
-		op := ""
-		hostname := ""
+		//nolint
+		op, _ := mockCmd.Flags().GetString("operation")
+		//nolint
+		hostname, _ := mockCmd.Flags().GetString("hostname")
 
 		keys := SortLatencies(latencies)
 
