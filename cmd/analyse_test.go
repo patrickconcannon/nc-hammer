@@ -25,75 +25,38 @@ import (
 	"gonum.org/v1/gonum/stat"
 )
 
-// Test variables used to populate []result.NetconfResult used throughout
+// Mock testsuites used to populate []result.NetconfResult used in tests below.
 var (
-	ts1 = result.NetconfResult{Client: 5, SessionID: 2318, Hostname: "10.0.0.1", Operation: "edit-config", When: 55282, Err: "", Latency: 288}
-	ts2 = result.NetconfResult{Client: 6, SessionID: 859, Hostname: "10.0.0.2", Operation: "get-config", When: 55943, Err: "", Latency: 176}
-	ts3 = result.NetconfResult{Client: 4, SessionID: 601, Hostname: "10.0.0.3", Operation: "get", When: 9840, Err: "", Latency: 3320}
-	ts4 = result.NetconfResult{Client: 4, SessionID: 2322, Hostname: "10.0.0.1", Operation: "get", When: 56967, Err: "", Latency: 420}
-	ts5 = result.NetconfResult{Client: 4, SessionID: 860, Hostname: "10.0.0.2", Operation: "kill-session", When: 0, Err: "kill-session is not a supported operation", Latency: 0}
+	mockCmd       *cobra.Command = &cobra.Command{}
+	mockTestSuite                = TestSuite{File: "testdata/emptytestsuite.yml"}
+
+	mts1 = result.NetconfResult{Client: 5, SessionID: 2318, Hostname: "10.0.0.1", Operation: "edit-config", When: 55282, Err: "", Latency: 288}
+	mts2 = result.NetconfResult{Client: 6, SessionID: 859, Hostname: "10.0.0.2", Operation: "get-config", When: 55943, Err: "", Latency: 176}
+	mts3 = result.NetconfResult{Client: 4, SessionID: 601, Hostname: "10.0.0.3", Operation: "get", When: 9840, Err: "", Latency: 3320}
+	mts4 = result.NetconfResult{Client: 4, SessionID: 2322, Hostname: "10.0.0.1", Operation: "get", When: 56967, Err: "", Latency: 420}
+	mts5 = result.NetconfResult{Client: 4, SessionID: 860, Hostname: "10.0.0.2", Operation: "kill-session", When: 0, Err: "kill-session is not a supported operation", Latency: 0}
+	mts6 = result.NetconfResult{Client: 1, SessionID: 80, Hostname: "10.0.0.3", Operation: "close-session", When: 0, Err: "close-session is not a supported operation", Latency: 0}
+	mts7 = result.NetconfResult{Client: 1, SessionID: 80, Hostname: "10.0.0.3", Operation: "-----", When: 0, Err: "----- ----- is not a supported operation", Latency: 0}
 )
 
-func TestSortResults(t *testing.T) {
+func redirectOutput(mockResults []result.NetconfResult) (one string, two string) {
 
-	testSort := func(t *testing.T, unsortedSlice []result.NetconfResult, want []result.NetconfResult) {
-		t.Helper()
+	var fLOG, fCON string
 
-		SortResults(unsortedSlice)
-		got := unsortedSlice
-
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, want %v", got, want)
-		}
-	}
-
-	t.Run("Sort by Hostname", func(t *testing.T) {
-		unsortedSlice := []result.NetconfResult{ts3, ts1, ts2}
-		want := []result.NetconfResult{ts1, ts2, ts3}
-
-		testSort(t, unsortedSlice, want)
-	})
-
-	t.Run("Sort by Operation", func(t *testing.T) {
-		unsortedSlice := []result.NetconfResult{ts3, ts4, ts2, ts5, ts1}
-		want := []result.NetconfResult{ts1, ts4, ts2, ts5, ts3}
-
-		testSort(t, unsortedSlice, want)
-	})
-}
-
-func TestOrderAndExcludeErrValues(t *testing.T) {
-	testResults := []result.NetconfResult{ts1, ts2, ts3, ts4, ts5}
-	testLatencies := make(map[string]map[string][]float64)
-
-	got := OrderAndExcludeErrValues(testResults, testLatencies)
-
-	if got != 1 {
-		t.Errorf("got %v, want %v", 1, got)
-	}
-}
-
-func TestAnalyseResults(t *testing.T) {
-	var latencies = make(map[string]map[string][]float64)
-	var mockCmd *cobra.Command = &cobra.Command{}
-	var mockResults = []result.NetconfResult{ts1, ts2, ts3}
-	var mockTs = TestSuite{}
-	mockTs.File = "testdata/emptytestsuite.yml"
-
-	// Capture StdErr
+	// Redirect StdErr to buffer
 	var logOut = new(bytes.Buffer)
-	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime)) // remove timestamps
-	log.SetOutput(logOut)                                // log output
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+	log.SetOutput(logOut)
 
-	// Capture StdOut
+	// Redirect StdOut to buffer
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	AnalyseResults(mockCmd, &mockTs, mockResults)
+	AnalyseResults(mockCmd, &mockTestSuite, mockResults)
 
+	// copy Stdout to buffer in a separate goroutine so printing can't block indefinitely
 	out := make(chan string)
-	// copy the output in a separate goroutine so printing can't block indefinitely
 	go func() {
 		defer r.Close()
 		var buf bytes.Buffer
@@ -103,27 +66,101 @@ func TestAnalyseResults(t *testing.T) {
 	}()
 
 	w.Close()
-	os.Stdout = old
-	consoleOut := <-out // console output
+	os.Stdout = old // restore original
+	consoleOut := <-out
 
-	testRun := func(t *testing.T, got, want string) {
+	// have logOut and consoleOut
+	re := regexp.MustCompile(`\r?\n`)
+	fLOG = strings.Trim(re.ReplaceAllString(logOut.String(), " "), " ")
+
+	// remove formating from table returned by AnalayseResults
+	removeWhtsp := regexp.MustCompile(`^[\s\p{Zs}]+|[\s\p{Zs}]+$`) // remove whitespace outside required string
+	fCON = removeWhtsp.ReplaceAllString(consoleOut, "")
+	removeWhtsp = regexp.MustCompile(`[\s\p{Zs}]{2,}`) // remove whitespace inside required string
+	fCON = removeWhtsp.ReplaceAllString(fCON, " ")
+
+	return fCON, fLOG
+}
+func TestSortResults(t *testing.T) {
+
+	testSort := func(t *testing.T, unsortedSlice, expected []result.NetconfResult) {
 		t.Helper()
 
-		assert.Equal(t, got, want)
+		SortResults(unsortedSlice)
+		actual := unsortedSlice
+
+		if !reflect.DeepEqual(actual, expected) {
+			t.Errorf("actual %v, expected %v", actual, expected)
+		}
 	}
 
-	t.Run("Log check", func(t *testing.T) {
+	t.Run("Sort by Hostname", func(t *testing.T) {
+		unsortedSlice := []result.NetconfResult{mts3, mts1, mts2}
+		expected := []result.NetconfResult{mts1, mts2, mts3}
+
+		testSort(t, unsortedSlice, expected)
+	})
+
+	t.Run("Sort by Operation", func(t *testing.T) {
+		unsortedSlice := []result.NetconfResult{mts3, mts4, mts2, mts5, mts1}
+		expected := []result.NetconfResult{mts1, mts4, mts2, mts5, mts3}
+
+		testSort(t, unsortedSlice, expected)
+	})
+}
+
+func TestOrderAndExcludeErrValues(t *testing.T) {
+
+	var mockLatencies = make(map[string]map[string][]float64)
+
+	testOrderExclude := func(t *testing.T, mockResults []result.NetconfResult, expected int) {
+
+		t.Helper()
+
+		actual := OrderAndExcludeErrValues(mockResults, mockLatencies)
+
+		if actual != expected {
+			t.Errorf("actual %v, expected %v", expected, actual)
+		}
+	}
+
+	t.Run("Exclude zero errors", func(t *testing.T) {
+		mockResults := []result.NetconfResult{mts1, mts2, mts3, mts4}
+		testOrderExclude(t, mockResults, 0)
+	})
+
+	t.Run("Exclude many errors", func(t *testing.T) {
+		mockResults := []result.NetconfResult{mts5, mts6, mts7}
+		testOrderExclude(t, mockResults, 3)
+	})
+}
+
+// AnalyseResults prints to both Stdout and StdErr, so both must be captured in
+// order to test for correct output.
+func TestAnalyseResults(t *testing.T) {
+
+	var mockResults = []result.NetconfResult{mts1, mts2, mts3}
+	var mockLatencies = make(map[string]map[string][]float64)
+
+	expectedStdout, expectedStderr := redirectOutput(mockResults)
+
+	testAnalyse := func(t *testing.T, actual, expected string) {
+		t.Helper()
+		assert.Equal(t, actual, expected)
+	}
+
+	t.Run("Check correct output to Stderr", func(t *testing.T) {
 
 		var logBuffer bytes.Buffer
-
-		logBuffer.WriteString("Testsuite executed at " + strings.Split(mockTs.File, string(filepath.Separator))[1] + " Suite defined the following hosts: ")
+		logBuffer.WriteString("Testsuite executed at " + strings.Split(mockTestSuite.File, string(filepath.Separator))[1] + " Suite defined the following hosts: ")
 		logBuffer.WriteString("[")
-		for _, config := range mockTs.Configs {
+
+		for _, config := range mockTestSuite.Configs {
 			logBuffer.WriteString(config.Hostname + " ")
 		}
 		logBuffer.WriteString("] ")
 
-		errCount := OrderAndExcludeErrValues(mockResults, latencies)
+		errCount := OrderAndExcludeErrValues(mockResults, mockLatencies)
 
 		var when float64
 		for _, result := range mockResults {
@@ -132,100 +169,107 @@ func TestAnalyseResults(t *testing.T) {
 			}
 		}
 		executionTime := time.Duration(when) * time.Millisecond
-
-		logBuffer.WriteString(strconv.Itoa(mockTs.Clients) + " client(s) started, " + strconv.Itoa(mockTs.Iterations) + " iterations per client, " + strconv.Itoa(mockTs.Rampup) + " seconds wait between starting each client ")
+		logBuffer.WriteString(strconv.Itoa(mockTestSuite.Clients) + " client(s) started, " + strconv.Itoa(mockTestSuite.Iterations) + " iterations per client, " + strconv.Itoa(mockTestSuite.Rampup) + " seconds wait between starting each client ")
 		logBuffer.WriteString(" Total execution time: " + executionTime.String() + ", Suite execution contained " + strconv.Itoa(errCount) + " errors")
 
-		// Format logString
+		actual := strings.Trim(logBuffer.String(), " ")
 
-		re := regexp.MustCompile(`\r?\n`)
-		got := strings.Trim(re.ReplaceAllString(logOut.String(), " "), " ")
-
-		testRun(t, got, logBuffer.String())
+		testAnalyse(t, actual, expectedStderr)
 	})
 
-	t.Run("Console check", func(t *testing.T) {
+	t.Run("Check for correct output to Stdout -- flags not set", func(t *testing.T) {
 
-		//nolint
-		op, _ := mockCmd.Flags().GetString("operation")
-		//nolint
-		hostname, _ := mockCmd.Flags().GetString("hostname")
-
-		keys := SortLatencies(latencies)
-
-		consoleBuffer := new(bytes.Buffer)
+		var consoleBuffer bytes.Buffer
 		consoleBuffer.WriteString("HOST OPERATION REUSE CONNECTION REQUESTS TPS MEAN VARIANCE STD DEVIATION ")
+
+		keys := SortLatencies(mockLatencies)
 		for _, k := range keys {
 			host := k
-			operations := latencies[k]
-			//	for host, operations := range latencies {
-			for operation, latencies := range operations {
-				if op != "" && op != operation {
-					continue
-				}
-				if hostname != "" && hostname != host {
-					continue
-				}
-				mean := stat.Mean(latencies, nil)
+			operations := mockLatencies[k]
+			for operation, mockLatencies := range operations {
+				mean := stat.Mean(mockLatencies, nil)
 				tps := 1000 / mean
-				variance := stat.Variance(latencies, nil)
+				variance := stat.Variance(mockLatencies, nil)
 				stddev := math.Sqrt(variance)
-				consoleBuffer.WriteString(host + " " + operation + " " + strconv.FormatBool(mockTs.Configs.IsReuseConnection(host)) + " " + strconv.Itoa(len(latencies)) + " " + fmt.Sprintf("%.2f", tps) + " " + fmt.Sprintf("%.2f", mean) + " " + fmt.Sprintf("%.2f", variance) + " " + fmt.Sprintf("%.2f", stddev) + " ")
+				consoleBuffer.WriteString(host + " " + operation + " " + strconv.FormatBool(mockTestSuite.Configs.IsReuseConnection(host)) + " " + strconv.Itoa(len(mockLatencies)) + " " + fmt.Sprintf("%.2f", tps) + " " + fmt.Sprintf("%.2f", mean) + " " + fmt.Sprintf("%.2f", variance) + " " + fmt.Sprintf("%.2f", stddev) + " ")
 			}
 		}
-		// remove formating from test table
-		removeWhtsp := regexp.MustCompile(`^[\s\p{Zs}]+|[\s\p{Zs}]+$`) // remove whitespace outside required string
-		want := removeWhtsp.ReplaceAllString(consoleOut, "")
-		removeWhtsp = regexp.MustCompile(`[\s\p{Zs}]{2,}`) // remove whitespace inside required string
-		want = removeWhtsp.ReplaceAllString(want, " ")
 
-		got := strings.Trim(consoleBuffer.String(), " ")
+		actual := strings.Trim(consoleBuffer.String(), " ")
 
-		testRun(t, got, want)
+		testAnalyse(t, actual, expectedStdout)
 	})
 }
 
-func TestAnalyseArgs(t *testing.T) {
+func TestAnalyseResultsWithFlags(t *testing.T) {
 
-	var testCmd = AnalyseCmd
-	var cmd = &cobra.Command{}
+	var mockResults = []result.NetconfResult{mts1, mts2, mts3}
 
-	testStruct := func(t *testing.T, args []string, got error) {
+	testAnalyseWithFlag := func(t *testing.T) {
 		t.Helper()
 
-		want := testCmd.Args(cmd, args) // args = 1 or != 1
-		assert.Equal(t, got, want)
+		redirectOutput(mockResults)
+
+		// reset flags after each test
+		mockCmd.ResetFlags()
+	}
+
+	t.Run("Operation flag set", func(t *testing.T) {
+		var flag = "operation"
+		mockCmd.Flags().StringVar(&flag, "operation", "edit-config", "")
+
+		testAnalyseWithFlag(t)
+	})
+
+	t.Run("Hostname flag set", func(t *testing.T) {
+		var flag = "hostname"
+		mockCmd.Flags().StringVar(&flag, "hostname", "10.0.0.2", "")
+
+		testAnalyseWithFlag(t)
+	})
+}
+
+func TestAnalyseCmdArgs(t *testing.T) {
+
+	var testCmd = AnalyseCmd
+	var tempCmd = &cobra.Command{}
+
+	testArgs := func(t *testing.T, args []string, expected error) {
+		t.Helper()
+
+		actual := testCmd.Args(tempCmd, args) // args = 1 or != 1
+		assert.Equal(t, actual, expected)
 	}
 
 	t.Run("args == 1", func(t *testing.T) {
-		var a = []string{"a"}
+		var mockArgs = []string{"run"}
 
-		testStruct(t, a, nil)
+		testArgs(t, mockArgs, nil)
 	})
 
 	t.Run("args != 1", func(t *testing.T) {
-		b := []string{"a", "b", "c"}
-		rstr := errors.New("analyse command requires a test results directory as an argument")
+		var mockArgs = []string{"run", "error", "kill"}
+		expected := errors.New("analyse command requires a test results directory as an argument")
 
-		testStruct(t, b, rstr)
+		testArgs(t, mockArgs, expected)
 	})
 }
 
-func TestAnalyseRun(t *testing.T) {
+func TestAnalyseCmdRun(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		mockCmd  *cobra.Command
+		testCmd  *cobra.Command
 		testArgs []string
 	}{
 		// TODO: add more use cases
-		{name: "single valid yaml file", mockCmd: &cobra.Command{}, testArgs: []string{"../suite/testdata/results_test/2018-07-18-19-56-01/"}},
+		{name: "single valid yaml file", testCmd: &cobra.Command{}, testArgs: []string{"../suite/testdata/results_test/2018-07-18-19-56-01/"}},
 	}
 
 	for _, tt := range tests {
 		// Run test as subprocess when environment variable is set as 1
 		if os.Getenv("RUN_SUBPROCESS") == "1" {
-			AnalyseCmd.Run(tt.mockCmd, tt.testArgs)
+			AnalyseCmd.Run(tt.testCmd, tt.testArgs)
 			return
 		}
 
