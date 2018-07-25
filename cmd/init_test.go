@@ -155,10 +155,12 @@ func TestInitRunCompletion(t *testing.T) {
 		mockCmd.Run(tempCmd, args)
 		return
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestInitRun") // create new process to run test
-	cmd.Env = append(os.Environ(), "RUN_SUBPROCESS=1")       // set environmental variable
-	err := cmd.Run()                                         // run
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {  // check exit status of test subprocess
+	cmd := exec.Command(os.Args[0], "-test.run=TestInitRunCompletion") // create new process to run test
+	cmd.Env = append(os.Environ(), "RUN_SUBPROCESS=1")                 // set environmental variable
+	err := cmd.Run()                                                   // run
+	if e, ok := err.(*exec.ExitError); ok && !e.Success() {            // check exit status of test subprocess
 		t.Errorf("\n - Exit Status 1 returned\n - File '%v' already exists", args[0])
 	}
+	// clean up test dir and files
+	os.RemoveAll(mockDirPath)
 }

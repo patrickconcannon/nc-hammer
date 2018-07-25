@@ -37,6 +37,9 @@ func TestHandleResults(t *testing.T) {
 	close(mockResultChan)
 	<-mockResultsHandler // Finish
 
+	// clean up test dir and files
+	os.RemoveAll("results/")
+
 	// test to see if HandleResults() has recorded Results correctly
 	if !reflect.DeepEqual(actualResults, expectedResults) {
 		t.Errorf("actual %v expected %v", actualResults, expectedResults)
