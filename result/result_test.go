@@ -45,7 +45,7 @@ func TestHandleResults(t *testing.T) {
 
 func TestUnarchiveResults(t *testing.T) {
 
-	mockResultPath := "../suite/testdata/"
+	mockResultPath := "../suite/testdata/results_test/2018-07-18-19-56-01/"
 
 	var mockNCR = []result.NetconfResult{}
 	var mockTestsuite, mockErr = suite.NewTestSuite(filepath.Join(mockResultPath, "test-suite.yml"))
