@@ -34,14 +34,14 @@ func operationOrMessage(netconf *suite.Netconf) string {
 }
 
 // ExecuteNetconf invoked when a NETCONF Action is identified
-func ExecuteNetconf(tsStart time.Time, cID int, action suite.Action, config *suite.Sshconfig, resultChannel chan result.NetconfResult) {
+func (n *Netconf) ExecuteNetconf(tsStart time.Time, cID int, action suite.Action, config *suite.Sshconfig, resultChannel chan result.NetconfResult) {
 
 	var result result.NetconfResult
 	result.Client = cID
 	result.Hostname = action.Netconf.Hostname
 	result.Operation = operationOrMessage(action.Netconf)
 
-	session, err := getSession(cID, config.Hostname+":"+strconv.Itoa(config.Port), config.Username, config.Password, config.Reuseconnection)
+	session, err := n.GetSession(cID, config.Hostname+":"+strconv.Itoa(config.Port), config.Username, config.Password, config.Reuseconnection)
 	if err != nil {
 		fmt.Printf("E")
 		result.Err = err.Error()
@@ -111,7 +111,7 @@ func ExecuteNetconf(tsStart time.Time, cID int, action suite.Action, config *sui
 }
 
 // getSession returns a NETCONF Session, either a new one or a pre existing one if resuseConnection is valid for client/host
-func getSession(client int, hostname, username, password string, reuseConnection bool) (*netconf.Session, error) {
+func (n *Netconf) GetSession(client int, hostname, username, password string, reuseConnection bool) (*netconf.Session, error) {
 	// check if hostname should reuse connection
 	if reuseConnection {
 		// get Session from Map if present
@@ -120,20 +120,32 @@ func getSession(client int, hostname, username, password string, reuseConnection
 			return session, nil
 		}
 		// not present in map, therefore first time its called, create a new session and store in map
-		session, err := createNewSession(hostname, username, password)
+		session, err := n.CreateNewSession(hostname, username, password)
 		if err == nil {
 			gSessions[strconv.Itoa(client)+hostname] = session
 		}
 		return session, nil
 	}
-	return createNewSession(hostname, username, password)
+	return n.CreateNewSession(hostname, username, password)
 }
 
-func createNewSession(hostname, username, password string) (*netconf.Session, error) {
+func (n *Netconf) CreateNewSession(hostname, username, password string) (*netconf.Session, error) {
 	sshConfig := &ssh.ClientConfig{
 		User:            username,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 	return netconf.DialSSH(hostname, sshConfig)
+}
+
+type Netconf struct {
+}
+
+type NetconfInterface interface {
+	CreateNewSession(hostname, username, password string) (*netconf.Session, error)
+	GetSession(client int, hostname, username, password string, reuseConnection bool) (*netconf.Session, error)
+}
+
+type NetconfHandler struct {
+	Nc NetconfInterface
 }
