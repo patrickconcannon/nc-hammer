@@ -34,7 +34,7 @@ func operationOrMessage(netconf *suite.Netconf) string {
 }
 
 // ExecuteNetconf invoked when a NETCONF Action is identified
-func (n *Netconf) ExecuteNetconf(tsStart time.Time, cID int, action suite.Action, config *suite.Sshconfig, resultChannel chan result.NetconfResult) {
+func ExecuteNetconf(n NetconfInterface, tsStart time.Time, cID int, action suite.Action, config *suite.Sshconfig, resultChannel chan result.NetconfResult) {
 
 	var result result.NetconfResult
 	result.Client = cID
@@ -42,6 +42,8 @@ func (n *Netconf) ExecuteNetconf(tsStart time.Time, cID int, action suite.Action
 	result.Operation = operationOrMessage(action.Netconf)
 
 	session, err := n.GetSession(cID, config.Hostname+":"+strconv.Itoa(config.Port), config.Username, config.Password, config.Reuseconnection)
+	i, _ := session.(*netconf.Session) // i know its a netconf session
+
 	if err != nil {
 		fmt.Printf("E")
 		result.Err = err.Error()
@@ -55,8 +57,8 @@ func (n *Netconf) ExecuteNetconf(tsStart time.Time, cID int, action suite.Action
 		defer session.Close()
 	}
 
-	if session != nil {
-		result.SessionID = session.SessionID
+	if i != nil {
+		result.SessionID = getSessionID(session)
 	} else {
 		fmt.Printf("E")
 		result.Err = "session has expired"
@@ -110,8 +112,9 @@ func (n *Netconf) ExecuteNetconf(tsStart time.Time, cID int, action suite.Action
 	resultChannel <- result
 }
 
-// getSession returns a NETCONF Session, either a new one or a pre existing one if resuseConnection is valid for client/host
-func (n *Netconf) GetSession(client int, hostname, username, password string, reuseConnection bool) (*netconf.Session, error) {
+// GetSession returns a NETCONF Session, either a new one or a pre existing one if resuseConnection is valid for client/host
+func (n *NetconfHandler) GetSession(client int, hostname, username, password string, reuseConnection bool) (SessionInterface, error) {
+
 	// check if hostname should reuse connection
 	if reuseConnection {
 		// get Session from Map if present
@@ -120,16 +123,20 @@ func (n *Netconf) GetSession(client int, hostname, username, password string, re
 			return session, nil
 		}
 		// not present in map, therefore first time its called, create a new session and store in map
-		session, err := n.CreateNewSession(hostname, username, password)
+		tempSession, err := n.CreateNewSession(hostname, username, password)
+		session = tempSession.(*netconf.Session)
+
 		if err == nil {
 			gSessions[strconv.Itoa(client)+hostname] = session
 		}
-		return session, nil
+		return session, nil // HERE
 	}
 	return n.CreateNewSession(hostname, username, password)
 }
 
-func (n *Netconf) CreateNewSession(hostname, username, password string) (*netconf.Session, error) {
+// CreateNewSession returns a SSH session
+func (n *NetconfHandler) CreateNewSession(hostname, username, password string) (SessionInterface, error) {
+
 	sshConfig := &ssh.ClientConfig{
 		User:            username,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
@@ -138,14 +145,41 @@ func (n *Netconf) CreateNewSession(hostname, username, password string) (*netcon
 	return netconf.DialSSH(hostname, sshConfig)
 }
 
-type Netconf struct {
+func getSessionID(s SessionInterface) int {
+	switch v := s.(type) {
+	case *netconf.Session:
+		return v.SessionID
+	default:
+		return 0
+	}
 }
 
-type NetconfInterface interface {
-	CreateNewSession(hostname, username, password string) (*netconf.Session, error)
-	GetSession(client int, hostname, username, password string, reuseConnection bool) (*netconf.Session, error)
-}
-
+// NetconfHandler struct
 type NetconfHandler struct {
+}
+
+// NetconfInterface interface
+type NetconfInterface interface {
+	GetSession(client int, hostname, username, password string, reuseConnection bool) (SessionInterface, error)
+	CreateNewSession(hostname, username, password string) (SessionInterface, error)
+}
+
+// Netconf struct
+type Netconf struct {
 	Nc NetconfInterface
+}
+
+//SessionHandler handler
+type SessionHandler struct {
+}
+
+//SessionInterface interface
+type SessionInterface interface {
+	Close() error
+	Exec(methods ...netconf.RPCMethod) (*netconf.RPCReply, error)
+}
+
+//NetconfSession struct
+type NetconfSession struct {
+	Ns SessionInterface
 }

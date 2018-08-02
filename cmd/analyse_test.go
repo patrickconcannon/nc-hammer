@@ -42,7 +42,6 @@ var (
 func redirectOutput(mockResults []result.NetconfResult) (string, string) {
 
 	var stdErrBuf, stdOutBuf string
-
 	// Redirect StdErr to buffer
 	var logOut = new(bytes.Buffer)
 	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))

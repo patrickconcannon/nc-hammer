@@ -12,8 +12,8 @@ import (
 func Execute(tsStart time.Time, cID int, ts *suite.TestSuite, action suite.Action, resultChannel chan result.NetconfResult) {
 	switch {
 	case action.Netconf != nil:
-		n := new(Netconf)
-		n.ExecuteNetconf(tsStart, cID, action, ts.GetConfig(action.Netconf.Hostname), resultChannel)
+		n := NetconfHandler{}
+		ExecuteNetconf(&n, tsStart, cID, action, ts.GetConfig(action.Netconf.Hostname), resultChannel)
 	case action.Sleep != nil:
 		ExecuteSleep(action)
 	default:
