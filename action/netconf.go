@@ -129,7 +129,7 @@ func (n *NetconfHandler) GetSession(client int, hostname, username, password str
 		if err == nil {
 			gSessions[strconv.Itoa(client)+hostname] = session
 		}
-		return session, nil // HERE
+		return session, nil
 	}
 	return n.CreateNewSession(hostname, username, password)
 }
@@ -146,9 +146,9 @@ func (n *NetconfHandler) CreateNewSession(hostname, username, password string) (
 }
 
 func getSessionID(s SessionInterface) int {
-	switch v := s.(type) {
+	switch t := s.(type) {
 	case *netconf.Session:
-		return v.SessionID
+		return t.SessionID
 	default:
 		return 0
 	}
